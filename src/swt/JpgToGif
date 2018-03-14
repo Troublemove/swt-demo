@@ -1,0 +1,90 @@
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOInvalidTreeException;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.stream.FileImageOutputStream;
+
+import org.w3c.dom.Node;
+
+public class Test {
+	public static void main(String[] args) throws Exception {
+		BufferedImage im1 = ImageIO.read(new File("C:\\Users\\nriet\\Desktop\\gif\\q.jpg"));
+		BufferedImage im2 = ImageIO.read(new File("C:\\Users\\nriet\\Desktop\\gif\\w.jpg"));
+		BufferedImage im3 = ImageIO.read(new File("C:\\Users\\nriet\\Desktop\\gif\\e.jpg"));
+		BufferedImage im4 = ImageIO.read(new File("C:\\Users\\nriet\\Desktop\\gif\\r.jpg"));
+		List<BufferedImage> list = new ArrayList<>();
+		list.add(im1);
+		list.add(im2);
+		list.add(im3);
+		list.add(im4);
+//		ImageIO.write(im, "gif", new File(""));
+		
+		Iterator writers = ImageIO.getImageWritersBySuffix("gif");
+		ImageWriter w = (ImageWriter) writers.next();
+		FileImageOutputStream stream = new FileImageOutputStream(new File("C:\\Users\\nriet\\Desktop\\gif\\tr\\1.gif"));
+		w.setOutput(stream);
+		w.prepareWriteSequence(null);
+		for (int i = 0; i < list.size(); i++) {
+			BufferedImage b = list.get(i);
+			list.set(i, null);
+			ImageWriteParam p = w.getDefaultWriteParam();
+			IIOMetadata d = w.getDefaultImageMetadata(new ImageTypeSpecifier(b), p);
+//			d.setFromTree("javax_imageio_gif_image_1.0", root);
+			if(i==0){
+				con(d, 1000, true);
+			} else if(i == list.size()-1){
+				con(d, 1000, true);
+			} else 
+				con(d, 1000, true);
+			IIOImage ii = new IIOImage(b, null, d);
+			w.writeToSequence(ii, null);
+		}
+		w.endWriteSequence();
+		System.out.println("end");
+	}
+	
+	private static void con(IIOMetadata metadata, int delayMillis, boolean first){
+		int delayCentis = delayMillis/10;
+		String metaFormat = metadata.getNativeMetadataFormatName();
+		Node root = metadata.getAsTree(metaFormat);
+		
+		Node child = root.getFirstChild();
+		while(child!=null){
+			if(child.getNextSibling()==null)
+				break;
+			child = child.getNextSibling();
+		}
+		
+		IIOMetadataNode gce = (IIOMetadataNode) child;
+		gce.setAttribute("userDelay", "FALSE");
+		gce.setAttribute("delayTime", String.valueOf(delayCentis));
+		
+		if(first){
+			IIOMetadataNode aes = new IIOMetadataNode("ApplicationExtensions");
+			IIOMetadataNode ae = new IIOMetadataNode("ApplicationExtension");
+			ae.setAttribute("applicationID", "NETSCAPE");
+			ae.setAttribute("authenticationCode", "2.0");
+			
+			byte[] uo = new byte[]{0x1,0x0,0x0};
+			ae.setUserObject(uo);
+			aes.appendChild(ae);
+			root.appendChild(aes);
+		}
+		try {
+			metadata.setFromTree(metaFormat, root);
+		} catch (IIOInvalidTreeException e) {
+			e.printStackTrace();
+		}
+	}
+}
